@@ -24,6 +24,14 @@ if not settings.is_firebase_mock:
 
 async def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
     if not authorization or not authorization.startswith("Bearer "):
+        if settings.is_firebase_mock or not firebase_app:
+            return {
+                "uid": "mock-guest-uid-123",
+                "email": "alex.smith@example.com",
+                "name": "Alex Smith",
+                "email_verified": True,
+                "role": "pro"
+            }
         raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
     
     token = authorization.split("Bearer ")[1]

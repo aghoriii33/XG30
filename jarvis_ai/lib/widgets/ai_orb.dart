@@ -61,7 +61,7 @@ class _AiOrbState extends State<AiOrb> with SingleTickerProviderStateMixin {
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: Colors.blue.withOpacity(widget.isSpeaking ? 0.35 : 0.15),
+                color: const Color(0xFF8B5CF6).withOpacity(widget.isSpeaking ? 0.35 : 0.15),
                 blurRadius: widget.isSpeaking ? 50 : 30,
                 spreadRadius: 10,
               ),

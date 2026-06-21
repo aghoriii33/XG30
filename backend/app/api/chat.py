@@ -28,20 +28,30 @@ class ChatResponse(BaseModel):
 
 def get_smart_mock_reply(message: str, model: str) -> str:
     message_lower = message.lower()
+    model_lower = model.lower()
     
     # Custom greeting / vision trigger replies
-    if "spending" in message_lower:
+    if message_lower in ["hi", "hello", "hey", "good morning", "good afternoon", "greetings"]:
+        return (
+            "Hello! I am JARVIS, your premium AI assistant. How can I help you today? "
+            "You can choose a model (ChatGPT-5 Pro, Claude 3.5 Sonnet, Gemini 3.1 Pro, DeepSeek-V3, Grok 2.0) above or start a voice session!"
+        )
+    
+    if "spending" in message_lower or "budget" in message_lower:
         return (
             "Based on your transaction logs from last month, you spent a total of **$1,245.50**.\n\n"
             "Here is the breakdown:\n"
-            "* 🍔 **Food & Dining**: $420.30\n"
-            "* 🚗 **Transport**: $180.20\n"
-            "* 🏠 **Utilities**: $350.00\n"
-            "* 🍿 **Entertainment**: $295.00\n\n"
-            "This is **12% higher** than your average spending. I suggest setting a budget of $350 for Food this month."
+            "| Category | Budgeted | Spent | Variance |\n"
+            "| :--- | :--- | :--- | :--- |\n"
+            "| 🍔 **Food & Dining** | $350.00 | $420.30 | +$70.30 (Over) |\n"
+            "| 🚗 **Transport** | $200.00 | $180.20 | -$19.80 (Under) |\n"
+            "| 🏠 **Utilities** | $350.00 | $350.00 | $0.00 (On-track) |\n"
+            "| 🍿 **Entertainment** | $200.00 | $295.00 | +$95.00 (Over) |\n"
+            "| **Total** | **$1,100.00** | **$1,245.50** | **+$145.50** |\n\n"
+            "This is **12.3% higher** than your average monthly spending. I suggest setting a budget of $350 for Food this month."
         )
     
-    if "ui inspiration" in message_lower or "design" in message_lower:
+    if "ui inspiration" in message_lower or "design" in message_lower or "color palette" in message_lower:
         return (
             "Here are three hot mobile design trends for 2026:\n\n"
             "1. **Bento Grid Layouts**: Organizing widgets into modular, clean grids. Very scanner-friendly!\n"
@@ -50,58 +60,126 @@ def get_smart_mock_reply(message: str, model: str) -> str:
             "Would you like me to generate a Flutter snippet for a glassmorphism container?"
         )
 
-    if model == "grok":
+    if "who are you" in message_lower or "what is jarvis" in message_lower or "tell me about yourself" in message_lower:
         return (
-            f"Oh, you want my Grok-style wisdom on: '{message}'? Let's be honest. "
-            "Humans spent billions of years evolving to ask a super-intelligence this question. "
-            "Well, here is the answer: it's all about efficiency, styling, and not writing bugs. "
-            "Also, buy some premium fuel. Go team JARVIS!"
+            "I am JARVIS, a highly advanced premium AI assistant built with a Flutter frontend "
+            "and a FastAPI backend. I support multi-model switching (ChatGPT-5 Pro, Claude 3.5 Sonnet, Gemini 3.1 Pro, DeepSeek-V3, Grok 2.0), "
+            "voice dictation (Voice Commander), interactive grid widgets, and subscription upgrades with Stripe."
         )
-    elif model == "claude":
+
+    if "weather" in message_lower:
         return (
-            f"I have analyzed your request regarding: '{message}'.\n\n"
-            "To address this comprehensively, we must divide the problem into three dimensions:\n"
-            "1. **Architectural Foundations**: Ensure state management (Riverpod) and routing (GoRouter) remain modular.\n"
-            "2. **Visual Fidelity**: Use customized shaders and CustomPaint for animations.\n"
-            "3. **API Integrity**: Check validation rules and schema structures on the backend.\n\n"
-            "Please let me know if you would like me to detail any of these points further."
+            "Checking local weather forecast... Currently, it is a pleasant 72°F (22°C) with clear skies "
+            "and a gentle breeze. Perfect weather for code refactoring!"
         )
-    elif model == "gemini":
+
+    if "code" in message_lower or "flutter" in message_lower or "write a" in message_lower or "program" in message_lower:
         return (
-            f"Greetings! Let's explore: '{message}'. 🚀\n\n"
-            "Here is a summary of what you need to know:\n"
-            "* **Concept**: Seamlessly bridging Flutter components with a FastAPI service.\n"
-            "* **Key Takeaway**: Riverpod makes state flow extremely predictable and robust.\n"
-            "* **Next Step**: Start testing the onboarding slider and check the Firebase mock token verify.\n\n"
-            "I'm ready for the next query!"
+            "Here is a code snippet generated for you:\n```dart\n"
+            "// JARVIS Auto-Generated Flutter Widget\n"
+            "class JarvisGlowButton extends StatelessWidget {\n"
+            "  const JarvisGlowButton({super.key});\n\n"
+            "  @override\n"
+            "  Widget build(BuildContext context) {\n"
+            "    return ElevatedButton(\n"
+            "      style: ElevatedButton.styleFrom(\n"
+            "        backgroundColor: const Color(0xFF8B5CF6),\n"
+            "        shadowColor: const Color(0xFFD946EF),\n"
+            "        elevation: 8,\n"
+            "        shape: RoundedRectangleBorder(\n"
+            "          borderRadius: BorderRadius.circular(20),\n"
+            "        ),\n"
+            "      ),\n"
+            "      onPressed: () {},\n"
+            "      child: const Text('Glow Active'),\n"
+            "    );\n"
+            "  }\n"
+            "}\n"
+            "```"
         )
-    elif model == "deepseek":
+
+    if "image" in message_lower or "draw" in message_lower or "paint" in message_lower or "generate" in message_lower:
         return (
+            "I have triggered the premium image generation engine to design your custom image. "
+            "In production mode, this calls DALL-E 3/Imagen, but I've mocked it up for you! "
+            "Try exploring the 'Explore' tab to see all image modification utilities like "
+            "Object Remover, Background Remover, and Face Enhancement!"
+        )
+
+    if "voice" in message_lower or "speech" in message_lower:
+        return (
+            "I can hear you loud and clear! The Voice Commander allows you to dictate commands "
+            "or talk with me hands-free. Try speaking into your microphone!"
+        )
+
+    # Model specific persona responders
+    if "claude" in model_lower:
+        return (
+            f"**Claude 3.5 Sonnet (Thinking - High)**\n\n"
+            f"```\n"
+            f"Thinking Process:\n"
+            f"▪ Deconstructing user query: '{message}'\n"
+            f"▪ Contextualizing query with active workspace files (auth.py, main.dart)\n"
+            f"▪ Synthesizing logical, step-by-step structural guidelines\n"
+            f"```\n\n"
+            f"Regarding your query on '{message}':\n\n"
+            f"To implement this with high architectural integrity, we should follow a three-tier execution:\n"
+            f"1. **Data Layer Integration**: Verify that endpoints parse requests into appropriate Pydantic schemas.\n"
+            f"2. **State Propagation**: Propagate state updates via Riverpod StateNotifiers to ensure unidirectional data flow.\n"
+            f"3. **Visual Feedback**: Apply custom Bezier animations to verify UI transitions.\n\n"
+            f"Please let me know if you would like to examine the exact code implementation for this."
+        )
+    elif "gemini" in model_lower:
+        return (
+            f"**Gemini 3.1 Pro (High-Fidelity Model)**\n\n"
+            f"Here is a comprehensive analysis of: '{message}' 🚀\n\n"
+            f"### Key Concepts\n"
+            f"* **Client-Server Synergy**: Synchronize Dart Riverpod providers with uvicorn endpoints.\n"
+            f"* **High Refresh Rate (120Hz)**: Enabled ProMotion support on Android and iOS.\n"
+            f"* **Modular Extension**: Added Explore screen (`explore.dart`) to categorize visual assets.\n\n"
+            f"### Next Action Items\n"
+            f"1. Test the native browser speech recognition integration.\n"
+            f"2. Trigger test Stripe checkout links from the chat client.\n\n"
+            f"Let's move on to the next query!"
+        )
+    elif "deepseek" in model_lower:
+        return (
+            f"**DeepSeek-V3 (Reasoning-R1 Mode)**\n\n"
+            f"```\n"
+            f"<reasoning>\n"
+            f"User query: '{message}'\n"
+            f"Evaluating optimal algorithmic complexity.\n"
+            f"Generating clean, lightweight, boilerplate-free code solution.\n"
+            f"</reasoning>\n"
+            f"```\n"
             f"```dart\n"
-            f"// Code generation request: '{message}'\n"
-            f"// Implementing premium widget\n"
-            f"class JarvisPremiumWidget extends StatelessWidget {{\n"
-            f"  const JarvisPremiumWidget({{super.key}});\n"
-            f"  @override\n"
-            f"  Widget build(BuildContext context) {{\n"
-            f"    return Container(\n"
-            f"      decoration: BoxDecoration(\n"
-            f"        gradient: LinearGradient(\n"
-            f"          colors: [Colors.blue.withOpacity(0.2), Colors.purple.withOpacity(0.2)],\n"
-            f"        ),\n"
-            f"        borderRadius: BorderRadius.circular(16),\n"
-            f"      ),\n"
-            f"      child: Center(child: Text('DeepSeek Optimization Active')),\n"
-            f"    );\n"
-            f"  }}\n"
-            f"}}\n"
+            f"// Optimized Dart code for '{message}'\n"
+            f"class JarvisCore {\n"
+            f"  static void run() {\n"
+            f"    print('JARVIS Core initialized. Efficiency set to maximum.');\n"
+            f"  }\n"
+            f"}\n"
             f"```"
         )
-    else: # gpt-5 or fallback
+    elif "grok" in model_lower:
         return (
-            f"JARVIS active. Regarding '{message}': I can confirm that the system is fully operational. "
-            f"We are running in Simulation Mode, giving you maximum responsiveness. Let me know how I can "
-            f"help you code, analyze documents, or schedule tasks today!"
+            f"**Grok 2.0 (Real-Time X-Data)**\n\n"
+            f"Oh, look at you asking Grok 2.0 about: '{message}'! 🤪\n\n"
+            f"Honestly, humans spend their entire lives trying to figure this out, and here you are "
+            f"solving it in a local Flutter web app using simulated responses. But hey, it works, "
+            f"which is more than I can say for some other AI models out there. Let's make this app "
+            f"famous! What's next?"
+        )
+    else: # chatgpt-5 / gpt-5 or default
+        return (
+            f"**ChatGPT-5 Pro (Max Trained)**\n\n"
+            f"I have analyzed your prompt regarding: '{message}'.\n\n"
+            f"I can confirm that the system is fully operational at maximum performance level. "
+            f"Here is an actionable implementation breakdown:\n"
+            f"* **CORS Policy**: Configured `CORSMiddleware` in FastAPI to allow seamless local testing.\n"
+            f"* **Authentication**: Updated Firebase mock helper to prevent 401 unauthorized errors.\n"
+            f"* **Speech**: Integrated native HTML5 speech APIs to read out text and synthesize inputs.\n\n"
+            f"What else can I generate, compute, or analyze for you today?"
         )
 
 @router.post("")

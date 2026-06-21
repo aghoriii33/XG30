@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'api_service.dart';
+import 'voice_manager.dart';
 
 class VoiceState {
   final bool isListening;
@@ -34,64 +36,131 @@ class VoiceState {
 }
 
 class VoiceService extends StateNotifier<VoiceState> {
-  VoiceService() : super(VoiceState());
-  Timer? _simulationTimer;
+  final ApiService _apiService;
+  late final VoiceManager _voiceManager;
+  Timer? _timer;
+  bool _initialized = false;
+
+  VoiceService(this._apiService) : super(VoiceState()) {
+    _voiceManager = VoiceManager();
+  }
+
+  void _initVoiceManager() {
+    if (_initialized) return;
+    _voiceManager.init(
+      onResult: (text) {
+        _handleSpeechResult(text);
+      },
+      onEnd: () {
+        if (state.isListening) {
+          state = state.copyWith(isListening: false, status: 'Tap to speak');
+        }
+      },
+      onError: (error) {
+        state = state.copyWith(
+          isListening: false,
+          status: 'Speech Error: Try typing or check mic',
+        );
+      },
+    );
+    _initialized = true;
+  }
 
   void startVoiceSession() {
-    state = VoiceState(
-      isListening: true,
-      status: "Go ahead, I'm listening...",
-    );
-    
-    // Simulate user speaking after 3 seconds
-    _simulationTimer?.cancel();
-    _simulationTimer = Timer(const Duration(seconds: 3), () {
-      state = state.copyWith(
-        isListening: false,
-        isSpeaking: false,
-        userText: "How much is my entire spending starting from last month?",
-        status: "Processing query...",
+    _initVoiceManager();
+    _voiceManager.stopSpeaking();
+    _timer?.cancel();
+
+    if (_voiceManager.isSupported) {
+      state = VoiceState(
+        isListening: true,
+        status: "I'm listening... Speak now",
+      );
+      _voiceManager.startListening();
+    } else {
+      // Offline/Desktop simulation fallback that calls the backend
+      state = VoiceState(
+        isListening: true,
+        status: "Simulating voice session... (Web Speech not supported)",
       );
       
-      // Simulate bot processing and then speaking after 1.5 seconds
-      _simulationTimer = Timer(const Duration(milliseconds: 1500), () {
-        state = state.copyWith(
-          isSpeaking: true,
-          status: "Speaking...",
-          botText: "Your total spending last month was \$1,245.50. You spent \$420.30 on Food, \$180.20 on Transport, and \$350 on Utilities.",
-        );
-        
-        // Stop speaking after 5 seconds
-        _simulationTimer = Timer(const Duration(seconds: 5), () {
-          state = state.copyWith(
-            isSpeaking: false,
-            status: "Waiting for reply...",
-          );
-        });
+      _timer = Timer(const Duration(seconds: 2), () {
+        _handleSpeechResult("What is my spending starting from last month?");
       });
-    });
+    }
   }
 
   void stopVoiceSession() {
-    _simulationTimer?.cancel();
+    _timer?.cancel();
+    _voiceManager.stopListening();
+    _voiceManager.stopSpeaking();
     state = VoiceState();
   }
 
   void toggleListening() {
-    if (state.isListening) {
+    if (state.isListening || state.isSpeaking) {
       stopVoiceSession();
     } else {
       startVoiceSession();
     }
   }
 
+  void stopSpeaking() {
+    _voiceManager.stopSpeaking();
+    state = state.copyWith(
+      isSpeaking: false,
+      status: 'Ready for next command',
+    );
+  }
+
+  Future<void> _handleSpeechResult(String text) async {
+    state = state.copyWith(
+      isListening: false,
+      userText: text,
+      status: "Processing voice command...",
+    );
+
+    try {
+      final response = await _apiService.sendChatMessage(
+        text,
+        "gpt-5",
+        [],
+      );
+      final reply = response['reply'] ?? "No response from AI.";
+      
+      state = state.copyWith(
+        isSpeaking: true,
+        botText: reply,
+        status: "Speaking...",
+      );
+
+      _voiceManager.speak(reply);
+
+      // Estimate speak duration
+      final duration = (reply.length / 14).clamp(3.0, 12.0).toInt();
+      _timer = Timer(Duration(seconds: duration), () {
+        state = state.copyWith(
+          isSpeaking: false,
+          status: 'Tap mic to talk again',
+        );
+      });
+    } catch (e) {
+      state = state.copyWith(
+        botText: "Sorry, I had trouble processing that: $e",
+        status: "Connection error",
+      );
+    }
+  }
+
   @override
   void dispose() {
-    _simulationTimer?.cancel();
+    _timer?.cancel();
+    _voiceManager.stopSpeaking();
     super.dispose();
   }
 }
 
 final voiceServiceProvider = StateNotifierProvider<VoiceService, VoiceState>((ref) {
-  return VoiceService();
+  final apiService = ref.watch(apiServiceProvider);
+  return VoiceService(apiService);
 });

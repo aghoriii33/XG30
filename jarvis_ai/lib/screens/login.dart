@@ -55,7 +55,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF07090E),
+      backgroundColor: const Color(0xFF07050F),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 28.0),
@@ -140,7 +140,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
-                          borderSide: const BorderSide(color: Colors.blueAccent),
+                          borderSide: const BorderSide(color: Color(0xFF8B5CF6)),
                         ),
                         errorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
@@ -176,7 +176,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
-                          borderSide: const BorderSide(color: Colors.blueAccent),
+                          borderSide: const BorderSide(color: Color(0xFF8B5CF6)),
                         ),
                       ),
                       validator: (value) {
@@ -210,11 +210,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(28),
                           gradient: const LinearGradient(
-                            colors: [Colors.blueAccent, Colors.purpleAccent],
+                            colors: [Color(0xFF8B5CF6), Color(0xFFD946EF)],
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.blue.withOpacity(0.3),
+                              color: const Color(0xFF8B5CF6).withOpacity(0.3),
                               blurRadius: 15,
                               offset: const Offset(0, 4),
                             ),
@@ -274,7 +274,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   Expanded(
                     child: OutlinedButton(
                       style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: Colors.blue.withOpacity(0.2)),
+                        side: BorderSide(color: const Color(0xFF8B5CF6).withOpacity(0.25)),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),

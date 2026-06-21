@@ -14,7 +14,7 @@ class ChatState {
   ChatState({
     required this.messages,
     this.isLoading = false,
-    this.activeModel = 'GPT-5',
+    this.activeModel = 'ChatGPT-5 Pro',
   });
 
   ChatState copyWith({
@@ -62,7 +62,6 @@ class ChatNotifier extends StateNotifier<ChatState> {
       );
 
       final reply = response['reply'] ?? 'Failed to get response';
-      final modelUsed = response['model_used'] ?? state.activeModel;
 
       final botMsg = ChatMessageData(role: 'assistant', content: reply);
       state = state.copyWith(
@@ -88,7 +87,13 @@ class ChatScreen extends ConsumerWidget {
   ChatScreen({super.key});
 
   final TextEditingController _textController = TextEditingController();
-  final List<String> _models = ['GPT-5', 'Claude', 'Gemini', 'DeepSeek', 'Grok'];
+  final List<String> _models = [
+    'ChatGPT-5 Pro',
+    'Claude 3.5 Sonnet (Thinking)',
+    'Gemini 3.1 Pro (High)',
+    'DeepSeek-V3',
+    'Grok 2.0'
+  ];
   final List<String> _suggestions = [
     'I need some UI inspiration...',
     'Show me color palettes...',

@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../services/voice_service.dart';
 import '../widgets/ai_orb.dart';
 import '../widgets/voice_wave.dart';
+import '../widgets/custom_bottom_bar.dart';
 
 class VoiceScreen extends ConsumerStatefulWidget {
   const VoiceScreen({super.key});
@@ -38,8 +39,9 @@ class _VoiceScreenState extends ConsumerState<VoiceScreen> {
     final voiceNotifier = ref.read(voiceServiceProvider.notifier);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF07090E),
+      backgroundColor: const Color(0xFF07050F),
       body: SafeArea(
+        bottom: false,
         child: Column(
           children: [
             const SizedBox(height: 16),
@@ -55,7 +57,7 @@ class _VoiceScreenState extends ConsumerState<VoiceScreen> {
                     onPressed: () => context.pop(),
                   ),
                   Text(
-                    "Talking to Sundae",
+                    "Voice Commander",
                     style: GoogleFonts.outfit(
                       color: Colors.white,
                       fontSize: 18,
@@ -72,6 +74,9 @@ class _VoiceScreenState extends ConsumerState<VoiceScreen> {
                       setState(() {
                         _speakerOn = !_speakerOn;
                       });
+                      if (!_speakerOn) {
+                        voiceNotifier.stopSpeaking();
+                      }
                     },
                   ),
                 ],
@@ -83,6 +88,7 @@ class _VoiceScreenState extends ConsumerState<VoiceScreen> {
             // Listening status
             Text(
               voiceState.status,
+              textAlign: TextAlign.center,
               style: GoogleFonts.outfit(
                 color: Colors.white.withOpacity(0.4),
                 fontSize: 14,
@@ -90,7 +96,7 @@ class _VoiceScreenState extends ConsumerState<VoiceScreen> {
               ),
             ),
             
-            const SizedBox(height: 48),
+            const SizedBox(height: 36),
 
             // Large Central Glowing AI Orb
             Center(
@@ -111,11 +117,12 @@ class _VoiceScreenState extends ConsumerState<VoiceScreen> {
                   // User's speech text (dimmer)
                   if (voiceState.userText.isNotEmpty)
                     Text(
-                      voiceState.userText,
+                      '"${voiceState.userText}"',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.outfit(
-                        color: Colors.white.withOpacity(0.5),
+                        color: const Color(0xFF8B5CF6).withOpacity(0.85),
                         fontSize: 16,
+                        fontStyle: FontStyle.italic,
                         height: 1.4,
                       ),
                     ),
@@ -171,11 +178,11 @@ class _VoiceScreenState extends ConsumerState<VoiceScreen> {
                       width: 72,
                       height: 72,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF2563EB),
+                        color: const Color(0xFF8B5CF6),
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.blue.withOpacity(0.35),
+                            color: const Color(0xFF8B5CF6).withOpacity(0.35),
                             blurRadius: 15,
                             spreadRadius: 2,
                           ),
@@ -206,35 +213,10 @@ class _VoiceScreenState extends ConsumerState<VoiceScreen> {
               ),
             ),
             
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
             
-            // Bottom Bar tabs indicator (Home, Wallet, AI active, Settings)
-            Container(
-              height: 50,
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.home_outlined, color: Colors.grey, size: 20),
-                    onPressed: () => context.go('/home'),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.account_balance_wallet_outlined, color: Colors.grey, size: 20),
-                    onPressed: () {},
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.auto_awesome_rounded, color: Colors.blueAccent, size: 20),
-                    onPressed: () {},
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.settings_outlined, color: Colors.grey, size: 20),
-                    onPressed: () {},
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
+            // Custom bottom bar
+            const CustomBottomBar(activeRoute: ''),
           ],
         ),
       ),

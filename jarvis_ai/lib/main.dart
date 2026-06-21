@@ -6,6 +6,7 @@ import 'screens/login.dart';
 import 'screens/home.dart';
 import 'screens/chat.dart';
 import 'screens/voice.dart';
+import 'screens/explore.dart';
 
 void main() {
   runApp(
@@ -39,6 +40,10 @@ final GoRouter _router = GoRouter(
       path: '/voice',
       builder: (context, state) => const VoiceScreen(),
     ),
+    GoRoute(
+      path: '/explore',
+      builder: (context, state) => ExploreScreen(),
+    ),
   ],
 );
 
@@ -56,9 +61,9 @@ class JarvisAI extends StatelessWidget {
         brightness: Brightness.dark,
         scaffoldBackgroundColor: const Color(0xFF07090E),
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF2563EB),
+          seedColor: const Color(0xFF8B5CF6),
           brightness: Brightness.dark,
-          primary: const Color(0xFF2563EB),
+          primary: const Color(0xFF8B5CF6),
           background: const Color(0xFF07090E),
         ),
         appBarTheme: const AppBarTheme(
