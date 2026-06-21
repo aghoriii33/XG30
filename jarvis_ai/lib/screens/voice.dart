@@ -6,6 +6,7 @@ import '../services/voice_service.dart';
 import '../widgets/ai_orb.dart';
 import '../widgets/voice_wave.dart';
 import '../widgets/custom_bottom_bar.dart';
+import '../widgets/vfx.dart';
 
 class VoiceScreen extends ConsumerStatefulWidget {
   const VoiceScreen({super.key});
@@ -40,11 +41,14 @@ class _VoiceScreenState extends ConsumerState<VoiceScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFF07050F),
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            const SizedBox(height: 16),
+      body: ParticleField(
+        particleCount: 50,
+        child: ScanlineOverlay(
+          child: SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                const SizedBox(height: 16),
             
             // Top Bar: Back/Menu + Title + Audio Toggle
             Padding(
@@ -56,7 +60,7 @@ class _VoiceScreenState extends ConsumerState<VoiceScreen> {
                     icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 22),
                     onPressed: () => context.pop(),
                   ),
-                  Text(
+                  ShimmerText(
                     "Voice Commander",
                     style: GoogleFonts.outfit(
                       color: Colors.white,
@@ -98,12 +102,22 @@ class _VoiceScreenState extends ConsumerState<VoiceScreen> {
             
             const SizedBox(height: 36),
 
-            // Large Central Glowing AI Orb
+            // Large Central Glowing AI Orb with GlowBorder VFX
             Center(
-              child: AiOrb(
-                size: 240,
-                isActive: voiceState.isListening || voiceState.isSpeaking,
-                isSpeaking: voiceState.isSpeaking,
+              child: GlowBorder(
+                borderRadius: 999,
+                colors: const [
+                  Color(0xFF8B5CF6),
+                  Color(0xFF06B6D4),
+                  Color(0xFFD946EF),
+                  Color(0xFF10A37F),
+                  Color(0xFF8B5CF6),
+                ],
+                child: AiOrb(
+                  size: 240,
+                  isActive: voiceState.isListening || voiceState.isSpeaking,
+                  isSpeaking: voiceState.isSpeaking,
+                ),
               ),
             ),
 
@@ -218,6 +232,8 @@ class _VoiceScreenState extends ConsumerState<VoiceScreen> {
             // Custom bottom bar
             const CustomBottomBar(activeRoute: ''),
           ],
+        ),
+          ),
         ),
       ),
     );

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/auth_service.dart';
 import '../widgets/custom_bottom_bar.dart';
+import '../widgets/vfx.dart';
 
 // Provider to watch current time
 final currentTimeProvider = StreamProvider<DateTime>((ref) {
@@ -131,12 +132,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
     return Scaffold(
       backgroundColor: const Color(0xFF07050F),
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 16),
+      body: AuroraBackground(
+        child: ParticleField(
+          particleCount: 35,
+          child: ScanlineOverlay(
+            child: SafeArea(
+              bottom: false,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 16),
 
             // Top Header: Avatar + Greetings + Menu
             Padding(
@@ -190,13 +195,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                             Text(emoji, style: const TextStyle(fontSize: 12)),
                           ],
                         ),
-                        Text(
+                        ShimmerText(
                           userName,
                           style: GoogleFonts.outfit(
                             fontSize: 16,
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
                           ),
+                          colors: const [
+                            Color(0xFFFFFFFF),
+                            Color(0xFF8B5CF6),
+                            Color(0xFF06B6D4),
+                            Color(0xFFFFFFFF),
+                          ],
                         ),
                       ],
                     ),
@@ -852,6 +863,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               ),
             ),
           ],
+              ),
+            ),
+          ),
         ),
       ),
       bottomNavigationBar: const CustomBottomBar(activeRoute: '/home'),

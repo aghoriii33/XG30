@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+backend/app.db
+backend/sqlite-data/
+.venv/
+
+# Flutter / Dart
+build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub/
+
+# Android build outputs in root
+jarvis_ai/android/build/
+.gradle/
+
+# Keys and config
+*.jks
+*.keystore
+key.properties
+local.properties
+.env
+
+# Skia
+.skia/

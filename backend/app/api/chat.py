@@ -218,60 +218,113 @@ def encrypt_e2ee(text: str, key: str) -> str:
     except Exception:
         return text
 
+import asyncio
+from fastapi.responses import StreamingResponse
+import json
+
+@router.post("/stream")
+async def chat_completion_stream(req: ChatRequest, user: dict = Depends(get_current_user)):
+    user_uid = user.get("uid", "mock-uid")
+    is_e2ee = req.message.startswith("E2EE:")
+    plain_message = decrypt_e2ee(req.message, user_uid) if is_e2ee else req.message
+
+    user_keys = get_user_keys(user_uid)
+    openai_key = user_keys.get("openai_key")
+    custom_api_key = openai_key if (openai_key and openai_key != "mock") else None
+
+    # Dynamic Fallback Models
+    active_model = req.model.lower()
+    openai_model = "gpt-4o-mini" # Fast fallback
+    if "chatgpt-5" in active_model or "turbo" in active_model:
+        openai_model = "gpt-4-turbo"
+
+    async def event_generator():
+        full_reply = ""
+        try:
+            if custom_api_key and custom_api_key != "":
+                client = openai.OpenAI(api_key=custom_api_key)
+                system_prompt = f"You are JARVIS. Persona: {req.model}. Keep it sleek and concise."
+                messages = [{"role": "system", "content": system_prompt}]
+                
+                # Rolling Context: last 5 messages
+                recent_history = req.history[-5:] if len(req.history) > 5 else req.history
+                for msg in recent_history:
+                    hist_content = decrypt_e2ee(msg.content, user_uid)
+                    messages.append({"role": msg.role, "content": hist_content})
+                messages.append({"role": "user", "content": plain_message})
+                
+                response_stream = client.chat.completions.create(
+                    model=openai_model,
+                    messages=messages,
+                    stream=True
+                )
+                
+                for chunk in response_stream:
+                    if chunk.choices[0].delta.content:
+                        text_chunk = chunk.choices[0].delta.content
+                        full_reply += text_chunk
+                        chunk_to_send = encrypt_e2ee(text_chunk, user_uid) if is_e2ee else text_chunk
+                        yield f"data: {json.dumps({'chunk': chunk_to_send})}\n\n"
+            else:
+                # Mock streaming
+                mock_reply = get_smart_mock_reply(plain_message, req.model)
+                words = mock_reply.split(" ")
+                for word in words:
+                    text_chunk = word + " "
+                    full_reply += text_chunk
+                    chunk_to_send = encrypt_e2ee(text_chunk, user_uid) if is_e2ee else text_chunk
+                    yield f"data: {json.dumps({'chunk': chunk_to_send})}\n\n"
+                    await asyncio.sleep(0.04)
+        except Exception as e:
+            logger.error(f"Error calling streaming API: {e}")
+            err = f"⚠️ API Error: {str(e)}"
+            full_reply += err
+            chunk_to_send = encrypt_e2ee(err, user_uid) if is_e2ee else err
+            yield f"data: {json.dumps({'chunk': chunk_to_send})}\n\n"
+            
+        yield "data: [DONE]\n\n"
+        
+        # Save logs
+        db_msg = req.message if is_e2ee else encrypt_e2ee(req.message, user_uid)
+        db_reply = encrypt_e2ee(full_reply, user_uid) if is_e2ee else full_reply
+        save_chat_message(user_uid, "session_1", "user", db_msg)
+        save_chat_message(user_uid, "session_1", "assistant", db_reply)
+        
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+# Keep the old endpoint for backward compatibility
 @router.post("")
 async def chat_completion(req: ChatRequest, user: dict = Depends(get_current_user)):
     user_uid = user.get("uid", "mock-uid")
-    
-    # 1. Decrypt incoming message if E2EE is active
     is_e2ee = req.message.startswith("E2EE:")
-    plain_message = req.message
-    if is_e2ee:
-        plain_message = decrypt_e2ee(req.message, user_uid)
-
-    # 2. Check for user custom keys
+    plain_message = decrypt_e2ee(req.message, user_uid) if is_e2ee else req.message
     user_keys = get_user_keys(user_uid)
     openai_key = user_keys.get("openai_key")
-    
-    # 3. Determine if we should make a real API call using user custom key
     custom_api_key = openai_key if (openai_key and openai_key != "mock") else None
     
-    # In case of real key, run real OpenAI completion
     if custom_api_key and custom_api_key != "":
         try:
             client = openai.OpenAI(api_key=custom_api_key)
-            system_prompt = (
-                "You are JARVIS, a highly advanced, premium AI assistant. "
-                f"You are responding using the '{req.model}' persona. Style your response accordingly. "
-                "Make responses sleek, formatted in markdown, and concise."
-            )
+            system_prompt = f"You are JARVIS. Persona: {req.model}. Style your response accordingly."
             messages = [{"role": "system", "content": system_prompt}]
-            for msg in req.history:
+            recent_history = req.history[-5:] if len(req.history) > 5 else req.history
+            for msg in recent_history:
                 hist_content = decrypt_e2ee(msg.content, user_uid)
                 messages.append({"role": msg.role, "content": hist_content})
             messages.append({"role": "user", "content": plain_message})
-            
-            response = client.chat.completions.create(
-                model="gpt-4-turbo",
-                messages=messages
-            )
+            response = client.chat.completions.create(model="gpt-4o-mini", messages=messages)
             reply = response.choices[0].message.content
             model_used = f"{req.model} (Custom OpenAI API Key)"
         except Exception as e:
             logger.error(f"Error calling custom OpenAI API: {e}")
             reply = get_smart_mock_reply(plain_message, req.model)
-            model_used = f"{req.model} (Custom API Key Fallback)"
+            model_used = f"{req.model} (Fallback)"
     else:
-        # Fallback to smart simulated reply
         reply = get_smart_mock_reply(plain_message, req.model)
         model_used = f"{req.model} (Simulated)"
-
-    # 4. If incoming message was E2EE, encrypt the reply
     reply_to_send = encrypt_e2ee(reply, user_uid) if is_e2ee else reply
-
-    # 5. Save encrypted log to SQLite
     db_msg = req.message if is_e2ee else encrypt_e2ee(req.message, user_uid)
-    db_reply = reply_to_send if is_e2ee else encrypt_e2ee(reply, user_uid)
+    db_reply = encrypt_e2ee(reply, user_uid) if is_e2ee else reply
     save_chat_message(user_uid, "session_1", "user", db_msg)
     save_chat_message(user_uid, "session_1", "assistant", db_reply)
-
     return ChatResponse(reply=reply_to_send, model_used=model_used)

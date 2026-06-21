@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/auth_service.dart';
+import '../widgets/vfx.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -56,13 +57,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF07050F),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 28.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 40),
+      body: AuroraBackground(
+        child: ScanlineOverlay(
+          child: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 28.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 40),
               
               // App logo / branding
               Row(
@@ -97,7 +100,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               
               const SizedBox(height: 48),
               
-              Text(
+              ShimmerText(
                 "Welcome to JARVIS",
                 style: GoogleFonts.outfit(
                   fontSize: 32,
@@ -197,45 +200,49 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                     const SizedBox(height: 32),
 
-                    // Submit Button
-                    GestureDetector(
-                      onTap: () {
-                        if (_formKey.currentState!.validate()) {
-                          _handleLogin(_emailController.text, _passwordController.text);
-                        }
-                      },
-                      child: Container(
-                        width: double.infinity,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(28),
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF8B5CF6), Color(0xFFD946EF)],
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF8B5CF6).withOpacity(0.3),
-                              blurRadius: 15,
-                              offset: const Offset(0, 4),
+                    // Submit Button with GlowBorder VFX
+                    GlowBorder(
+                      active: !_isLoading,
+                      borderRadius: 28,
+                      child: GestureDetector(
+                        onTap: () {
+                          if (_formKey.currentState!.validate()) {
+                            _handleLogin(_emailController.text, _passwordController.text);
+                          }
+                        },
+                        child: Container(
+                          width: double.infinity,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(28),
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF8B5CF6), Color(0xFFD946EF)],
                             ),
-                          ],
-                        ),
-                        child: Center(
-                          child: _isLoading
-                              ? const SizedBox(
-                                  width: 24,
-                                  height: 24,
-                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
-                                )
-                              : Text(
-                                  "Sign In",
-                                  style: GoogleFonts.outfit(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 0.5,
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF8B5CF6).withOpacity(0.4),
+                                blurRadius: 20,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Center(
+                            child: _isLoading
+                                ? const SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                                  )
+                                : Text(
+                                    "Sign In",
+                                    style: GoogleFonts.outfit(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 0.5,
+                                    ),
                                   ),
-                                ),
+                          ),
                         ),
                       ),
                     ),
@@ -325,7 +332,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ],
               ),
               const SizedBox(height: 32),
-            ],
+                ],
+              ),
+            ),
           ),
         ),
       ),

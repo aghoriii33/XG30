@@ -20,13 +20,16 @@ class ChatMessageData {
 class ApiService {
   final Ref _ref;
 
-  // Use 10.0.2.2 on Android emulator (maps to host's localhost)
-  // Use 127.0.0.1 on web/desktop
+  // ── Production URL: Update this after deploying to Render/Cloud ──
+  static const String _productionUrl = 'https://jarvis-backend.onrender.com';
+  static const bool _useProduction = false; // Set to true after cloud deploy
+
   String get _baseUrl {
+    if (_useProduction) return _productionUrl;
     if (!kIsWeb && Platform.isAndroid) {
-      return 'http://10.0.2.2:8000';
+      return 'http://10.0.2.2:8000'; // Android emulator → host localhost
     }
-    return 'http://127.0.0.1:8000';
+    return 'http://127.0.0.1:8000'; // Web / Windows / iOS simulator
   }
 
   ApiService(this._ref);
@@ -58,12 +61,62 @@ class ApiService {
         throw Exception('Server error: ${response.statusCode}');
       }
     } catch (e) {
-      // Fallback offline simulator
-      await Future.delayed(const Duration(milliseconds: 1200)); // Simulate network latency
+      await Future.delayed(const Duration(milliseconds: 1200));
       return {
         'reply': _getLocalMockResponse(message, model),
         'model_used': '$model (Local Offline Fallback)'
       };
+    }
+  }
+
+  Stream<String> sendChatMessageStream(String message, String model, List<ChatMessageData> history) async* {
+    final auth = _ref.read(authServiceProvider.notifier);
+    final headers = {
+      'Content-Type': 'application/json',
+      if (auth.token.isNotEmpty) 'Authorization': 'Bearer ${auth.token}',
+    };
+
+    final body = jsonEncode({
+      'message': message,
+      'model': model.toLowerCase(),
+      'history': history.map((e) => e.toJson()).toList(),
+    });
+
+    final request = http.Request('POST', Uri.parse('$_baseUrl/chat/stream'));
+    request.headers.addAll(headers);
+    request.body = body;
+
+    try {
+      final response = await http.Client().send(request);
+      if (response.statusCode != 200) {
+        yield "⚠️ Error: Backend returned ${response.statusCode}";
+        return;
+      }
+      
+      final stream = response.stream.transform(utf8.decoder).transform(const LineSplitter());
+      await for (var line in stream) {
+        if (line.startsWith('data: ')) {
+          final dataStr = line.substring(6).trim();
+          if (dataStr == '[DONE]') return;
+          if (dataStr.isEmpty) continue;
+          try {
+            final decoded = jsonDecode(dataStr);
+            if (decoded['chunk'] != null) {
+              yield decoded['chunk'];
+            }
+          } catch (e) {
+            // Ignore malformed JSON chunk
+          }
+        }
+      }
+    } catch (e) {
+      // Fallback offline simulator
+      final mock = _getLocalMockResponse(message, model);
+      final words = mock.split(' ');
+      for (var w in words) {
+        yield "$w ";
+        await Future.delayed(const Duration(milliseconds: 40));
+      }
     }
   }
 

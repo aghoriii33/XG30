@@ -6,6 +6,7 @@ import '../services/api_service.dart';
 import '../services/encryption_service.dart';
 import '../services/auth_service.dart';
 import '../widgets/message_bubble.dart';
+import '../widgets/ai_orb.dart';
 import 'settings_screen.dart';
 
 // Chat state structure
@@ -78,14 +79,19 @@ class ChatNotifier extends StateNotifier<ChatState> {
         : text;
 
     final userMsg = ChatMessageData(role: 'user', content: text);
+    
+    // Create an empty bot message to stream into
+    final botMsgIndex = state.messages.length + 1;
+    
     state = state.copyWith(
-      messages: [...state.messages, userMsg],
+      messages: [...state.messages, userMsg, ChatMessageData(role: 'assistant', content: '')],
       isLoading: true,
     );
 
     try {
       final List<ChatMessageData> encryptedHistory = [];
-      for (final msg in state.messages.sublist(0, state.messages.length - 1)) {
+      for (int i = 0; i < state.messages.length - 1; i++) {
+        final msg = state.messages[i];
         final encContent = e2eeEnabled
             ? (msg.content.startsWith('E2EE:')
                 ? msg.content
@@ -94,29 +100,38 @@ class ChatNotifier extends StateNotifier<ChatState> {
         encryptedHistory.add(ChatMessageData(role: msg.role, content: encContent));
       }
 
-      final response = await _apiService.sendChatMessage(
+      final stream = _apiService.sendChatMessageStream(
         contentToSend,
         state.activeModel,
         encryptedHistory,
       );
 
-      String reply = response['reply'] ?? 'Failed to get response';
-      if (e2eeEnabled && reply.startsWith('E2EE:')) {
-        reply = EncryptionService.decrypt(reply, userSecretKey);
+      String accumulated = '';
+      
+      await for (final chunk in stream) {
+        String decryptedChunk = chunk;
+        if (e2eeEnabled && chunk.startsWith('E2EE:')) {
+          decryptedChunk = EncryptionService.decrypt(chunk, userSecretKey);
+        }
+        
+        accumulated += decryptedChunk;
+        
+        final newMessages = List<ChatMessageData>.from(state.messages);
+        newMessages[botMsgIndex] = ChatMessageData(role: 'assistant', content: accumulated);
+        
+        state = state.copyWith(messages: newMessages);
       }
 
-      final botMsg = ChatMessageData(role: 'assistant', content: reply);
-      state = state.copyWith(
-        messages: [...state.messages, botMsg],
-        isLoading: false,
-      );
+      state = state.copyWith(isLoading: false);
     } catch (e) {
       final botMsg = ChatMessageData(
           role: 'assistant',
-          content:
-              '⚠️ **Connection Error**\n\nCould not reach JARVIS backend. The local server may be offline.\n\n```\nError: $e\n```\n\nPlease ensure the FastAPI backend is running on port 8000.');
+          content: '⚠️ **Connection Error**\n\nCould not reach JARVIS backend.\n\n```\nError: $e\n```');
+      
+      final newMessages = List<ChatMessageData>.from(state.messages);
+      newMessages[botMsgIndex] = botMsg;
       state = state.copyWith(
-        messages: [...state.messages, botMsg],
+        messages: newMessages,
         isLoading: false,
       );
     }
@@ -289,8 +304,23 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ],
       ),
       body: SafeArea(
-        child: Column(
-          children: [
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 600),
+          decoration: BoxDecoration(
+            boxShadow: chatState.isLoading ? [
+              BoxShadow(
+                color: const Color(0xFF8B5CF6).withOpacity(0.04),
+                blurRadius: 40,
+                spreadRadius: 10,
+              )
+            ] : [],
+            border: chatState.isLoading ? Border(
+              left: BorderSide(color: const Color(0xFF8B5CF6).withOpacity(0.2), width: 1.5),
+              right: BorderSide(color: const Color(0xFFD946EF).withOpacity(0.2), width: 1.5),
+            ) : null,
+          ),
+          child: Column(
+            children: [
             // Model Selector Pill Row
             Container(
               height: 56,
@@ -394,21 +424,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             // Typing Indicator
             if (chatState.isLoading)
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Row(
                   children: [
-                    _buildTypingDot(0),
-                    const SizedBox(width: 4),
-                    _buildTypingDot(1),
-                    const SizedBox(width: 4),
-                    _buildTypingDot(2),
+                    const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: AiOrb(size: 24, isActive: true, isSpeaking: true),
+                    ),
                     const SizedBox(width: 10),
                     Text(
-                      'JARVIS is thinking...',
+                      'JARVIS is generating...',
                       style: GoogleFonts.outfit(
-                        color: Colors.white30,
+                        color: const Color(0xFF8B5CF6).withOpacity(0.8),
                         fontSize: 12,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ],
@@ -562,26 +592,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildTypingDot(int index) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.3, end: 1.0),
-      duration: Duration(milliseconds: 500 + index * 150),
-      builder: (context, value, child) {
-        return Opacity(
-          opacity: value,
-          child: Container(
-            width: 7,
-            height: 7,
-            decoration: const BoxDecoration(
-              color: Color(0xFF8B5CF6),
-              shape: BoxShape.circle,
-            ),
-          ),
-        );
-      },
-    );
+    ),
+  );
   }
 }
