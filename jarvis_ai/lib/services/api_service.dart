@@ -22,7 +22,7 @@ class ApiService {
 
   // ── Production URL: Update this after deploying to Render/Cloud ──
   static const String _productionUrl = 'https://jarvis-backend.onrender.com';
-  static const bool _useProduction = false; // Set to true after cloud deploy
+  static const bool _useProduction = true; // Set to true after cloud deploy
 
   String get _baseUrl {
     if (_useProduction) return _productionUrl;
