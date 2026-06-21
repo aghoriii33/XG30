@@ -138,7 +138,7 @@ class OnboardingScreen extends StatelessWidget {
 
                   // Premium Get Started Button
                   GestureDetector(
-                    onTap: () => context.go('/home'),
+                    onTap: () => context.go('/login'),
                     child: Container(
                       width: double.infinity,
                       height: 60,

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../services/auth_service.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends ConsumerWidget {
   HomeScreen({super.key});
 
   final List<Map<String, dynamic>> _historyItems = [
@@ -21,7 +23,9 @@ class HomeScreen extends StatelessWidget {
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authServiceProvider);
+    final userName = user?.name ?? 'User';
     return Scaffold(
       backgroundColor: const Color(0xFF07090E),
       body: SafeArea(
@@ -50,7 +54,7 @@ class HomeScreen extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        "Michael",
+                        userName,
                         style: GoogleFonts.outfit(
                           fontSize: 22,
                           color: Colors.white,
@@ -59,16 +63,53 @@ class HomeScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                  // Sleek User Avatar
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.blue.withOpacity(0.4), width: 1.5),
-                      image: const DecorationImage(
-                        image: NetworkImage('https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80'),
-                        fit: BoxFit.cover,
+                  // Sleek User Avatar Popup Menu
+                  PopupMenuButton<String>(
+                    offset: const Offset(0, 50),
+                    color: const Color(0xFF0C0E14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(color: Colors.white.withOpacity(0.08)),
+                    ),
+                    onSelected: (value) {
+                      if (value == 'logout') {
+                        ref.read(authServiceProvider.notifier).signOut();
+                        context.go('/login');
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      PopupMenuItem<String>(
+                        enabled: false,
+                        child: Text(
+                          user?.email ?? 'Not signed in',
+                          style: GoogleFonts.outfit(color: Colors.white60, fontSize: 13),
+                        ),
+                      ),
+                      const PopupMenuDivider(),
+                      PopupMenuItem<String>(
+                        value: 'logout',
+                        child: Row(
+                          children: [
+                            const Icon(Icons.logout_rounded, color: Colors.redAccent, size: 18),
+                            const SizedBox(width: 8),
+                            Text(
+                              "Sign Out",
+                              style: GoogleFonts.outfit(color: Colors.redAccent),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    child: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.blue.withOpacity(0.4), width: 1.5),
+                        image: const DecorationImage(
+                          image: NetworkImage('https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80'),
+                          fit: BoxFit.cover,
+                        ),
                       ),
                     ),
                   ),
