@@ -30,7 +30,7 @@ jobs:
           flutter build ios --release --no-codesign
 
       - name: Upload iOS Build Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: jarvis-ios-build
           path: jarvis_ai/build/ios/iphoneos/Runner.app
