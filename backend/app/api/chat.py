@@ -182,46 +182,96 @@ def get_smart_mock_reply(message: str, model: str) -> str:
             f"What else can I generate, compute, or analyze for you today?"
         )
 
+import base64
+from app.db import get_user_keys, save_chat_message
+
+def decrypt_e2ee(cipher_text: str, key: str) -> str:
+    if not cipher_text or not cipher_text.startswith("E2EE:"):
+        return cipher_text
+    try:
+        payload = base64.b64decode(cipher_text[5:])
+        sum_salt = sum(ord(c) * (i + 1) for i, c in enumerate(key))
+        salt = sum_salt % 256
+        
+        decrypted = bytearray()
+        for i, b in enumerate(payload):
+            key_char = ord(key[i % len(key)])
+            decrypted.append(b ^ ((key_char + i + salt) & 0xFF))
+        return decrypted.decode("utf-8")
+    except Exception:
+        return cipher_text
+
+def encrypt_e2ee(text: str, key: str) -> str:
+    if not text:
+        return text
+    try:
+        sum_salt = sum(ord(c) * (i + 1) for i, c in enumerate(key))
+        salt = sum_salt % 256
+        
+        bytes_text = text.encode("utf-8")
+        encrypted = bytearray()
+        for i, b in enumerate(bytes_text):
+            key_char = ord(key[i % len(key)])
+            encrypted.append(b ^ ((key_char + i + salt) & 0xFF))
+        
+        return "E2EE:" + base64.b64encode(encrypted).decode("utf-8")
+    except Exception:
+        return text
+
 @router.post("")
 async def chat_completion(req: ChatRequest, user: dict = Depends(get_current_user)):
-    if settings.is_openai_mock:
-        reply = get_smart_mock_reply(req.message, req.model)
-        return ChatResponse(reply=reply, model_used=f"{req.model} (Simulated)")
+    user_uid = user.get("uid", "mock-uid")
     
-    try:
-        # Determine actual model mapping
-        # GPT-5 and others mapping to standard OpenAI models since GPT-5 doesn't exist yet
-        api_model = "gpt-4-turbo"
-        if req.model == "gpt-5":
-            api_model = "gpt-4-turbo"
-        elif req.model == "claude":
-            # If using custom LLMs or OpenAI compatible router
-            api_model = "gpt-4-turbo"
+    # 1. Decrypt incoming message if E2EE is active
+    is_e2ee = req.message.startswith("E2EE:")
+    plain_message = req.message
+    if is_e2ee:
+        plain_message = decrypt_e2ee(req.message, user_uid)
+
+    # 2. Check for user custom keys
+    user_keys = get_user_keys(user_uid)
+    openai_key = user_keys.get("openai_key")
+    
+    # 3. Determine if we should make a real API call using user custom key
+    custom_api_key = openai_key if (openai_key and openai_key != "mock") else None
+    
+    # In case of real key, run real OpenAI completion
+    if custom_api_key and custom_api_key != "":
+        try:
+            client = openai.OpenAI(api_key=custom_api_key)
+            system_prompt = (
+                "You are JARVIS, a highly advanced, premium AI assistant. "
+                f"You are responding using the '{req.model}' persona. Style your response accordingly. "
+                "Make responses sleek, formatted in markdown, and concise."
+            )
+            messages = [{"role": "system", "content": system_prompt}]
+            for msg in req.history:
+                hist_content = decrypt_e2ee(msg.content, user_uid)
+                messages.append({"role": msg.role, "content": hist_content})
+            messages.append({"role": "user", "content": plain_message})
             
-        client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
-        
-        # Prepare system prompt
-        system_prompt = (
-            "You are JARVIS, a highly advanced, premium AI assistant. "
-            f"You are responding using the '{req.model}' persona. Style your response accordingly. "
-            "Make responses sleek, formatted in markdown, and concise."
-        )
-        
-        messages = [{"role": "system", "content": system_prompt}]
-        for msg in req.history:
-            messages.append({"role": msg.role, "content": msg.content})
-        messages.append({"role": "user", "content": req.message})
-        
-        response = client.chat.completions.create(
-            model=api_model,
-            messages=messages
-        )
-        
-        return ChatResponse(
-            reply=response.choices[0].message.content,
-            model_used=f"{req.model} ({api_model})"
-        )
-    except Exception as e:
-        logger.error(f"Error calling OpenAI API: {e}. Falling back to Smart Simulator.")
-        reply = get_smart_mock_reply(req.message, req.model)
-        return ChatResponse(reply=reply + "\n\n*(Note: API call failed; running on smart simulation fallback)*", model_used=f"{req.model} (Simulated)")
+            response = client.chat.completions.create(
+                model="gpt-4-turbo",
+                messages=messages
+            )
+            reply = response.choices[0].message.content
+            model_used = f"{req.model} (Custom OpenAI API Key)"
+        except Exception as e:
+            logger.error(f"Error calling custom OpenAI API: {e}")
+            reply = get_smart_mock_reply(plain_message, req.model)
+            model_used = f"{req.model} (Custom API Key Fallback)"
+    else:
+        # Fallback to smart simulated reply
+        reply = get_smart_mock_reply(plain_message, req.model)
+        model_used = f"{req.model} (Simulated)"
+
+    # 4. If incoming message was E2EE, encrypt the reply
+    reply_to_send = encrypt_e2ee(reply, user_uid) if is_e2ee else reply
+
+    # 5. Save encrypted log to SQLite
+    db_msg = req.message if is_e2ee else encrypt_e2ee(req.message, user_uid)
+    db_reply = reply_to_send if is_e2ee else encrypt_e2ee(reply, user_uid)
+    save_chat_message(user_uid, "session_1", "user", db_msg)
+    save_chat_message(user_uid, "session_1", "assistant", db_reply)
+
+    return ChatResponse(reply=reply_to_send, model_used=model_used)

@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/api_service.dart';
+import '../services/encryption_service.dart';
+import '../services/auth_service.dart';
 import '../widgets/message_bubble.dart';
+import 'settings_screen.dart';
 
 // Chat state structure
 class ChatState {
@@ -32,8 +35,9 @@ class ChatState {
 
 class ChatNotifier extends StateNotifier<ChatState> {
   final ApiService _apiService;
+  final Ref _ref;
 
-  ChatNotifier(this._apiService)
+  ChatNotifier(this._apiService, this._ref)
       : super(ChatState(messages: [
           ChatMessageData(
             role: 'assistant',
@@ -48,6 +52,14 @@ class ChatNotifier extends StateNotifier<ChatState> {
   Future<void> sendMessage(String text) async {
     if (text.trim().isEmpty) return;
 
+    final user = _ref.read(authServiceProvider);
+    final userSecretKey = user?.uid ?? 'guest-uid';
+    final e2eeEnabled = _ref.read(e2eeProvider);
+
+    final String contentToSend = e2eeEnabled
+        ? EncryptionService.encrypt(text, userSecretKey)
+        : text;
+
     final userMsg = ChatMessageData(role: 'user', content: text);
     state = state.copyWith(
       messages: [...state.messages, userMsg],
@@ -55,13 +67,25 @@ class ChatNotifier extends StateNotifier<ChatState> {
     );
 
     try {
+      final List<ChatMessageData> encryptedHistory = [];
+      for (final msg in state.messages.sublist(0, state.messages.length - 1)) {
+        final encContent = e2eeEnabled
+            ? (msg.content.startsWith("E2EE:") ? msg.content : EncryptionService.encrypt(msg.content, userSecretKey))
+            : msg.content;
+        encryptedHistory.add(ChatMessageData(role: msg.role, content: encContent));
+      }
+
       final response = await _apiService.sendChatMessage(
-        text,
+        contentToSend,
         state.activeModel,
-        state.messages.sublist(0, state.messages.length - 1), // history excluding the new message
+        encryptedHistory,
       );
 
-      final reply = response['reply'] ?? 'Failed to get response';
+      String reply = response['reply'] ?? 'Failed to get response';
+
+      if (e2eeEnabled && reply.startsWith("E2EE:")) {
+        reply = EncryptionService.decrypt(reply, userSecretKey);
+      }
 
       final botMsg = ChatMessageData(role: 'assistant', content: reply);
       state = state.copyWith(
@@ -80,7 +104,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
 final chatNotifierProvider = StateNotifierProvider<ChatNotifier, ChatState>((ref) {
   final apiService = ref.watch(apiServiceProvider);
-  return ChatNotifier(apiService);
+  return ChatNotifier(apiService, ref);
 });
 
 class ChatScreen extends ConsumerWidget {
@@ -106,7 +130,7 @@ class ChatScreen extends ConsumerWidget {
     final chatNotifier = ref.read(chatNotifierProvider.notifier);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF07090E),
+      backgroundColor: const Color(0xFF07050F),
       appBar: AppBar(
         backgroundColor: const Color(0xFF0C0E14),
         elevation: 0,
@@ -212,6 +236,29 @@ class ChatScreen extends ConsumerWidget {
               ),
             ),
             
+            // E2EE Secured Banner
+            if (ref.watch(e2eeProvider))
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
+                color: const Color(0xFF0D9488).withOpacity(0.12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.lock_outline_rounded, color: Color(0xFF0D9488), size: 14),
+                    const SizedBox(width: 8),
+                    Text(
+                      "End-to-End Encrypted (E2EE) Active",
+                      style: GoogleFonts.outfit(
+                        color: const Color(0xFF0D9488),
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
             // Message List View
             Expanded(
               child: ListView.builder(

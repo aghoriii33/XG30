@@ -7,6 +7,7 @@ import 'screens/home.dart';
 import 'screens/chat.dart';
 import 'screens/voice.dart';
 import 'screens/explore.dart';
+import 'screens/settings_screen.dart';
 
 void main() {
   runApp(
@@ -43,6 +44,10 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/explore',
       builder: (context, state) => ExploreScreen(),
+    ),
+    GoRoute(
+      path: '/settings',
+      builder: (context, state) => const SettingsScreen(),
     ),
   ],
 );

@@ -2,9 +2,9 @@
 from fastapi import FastAPI
 # pyrefly: ignore [missing-import]
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import auth, chat, stripe
+from app.api import auth, chat, stripe, settings_router
 from app.config import settings
-# pyrefly: ignore [missing-import]
+from app.db import init_db
 import uvicorn
 import logging
 
@@ -16,6 +16,11 @@ app = FastAPI(
     description="Backend API serving LLM endpoints, auth verification, and Stripe payments.",
     version="1.0.0"
 )
+
+@app.on_event("startup")
+def startup_event():
+    init_db()
+    logger.info("Local SQLite database initialized.")
 
 # Set up CORS
 app.add_middleware(
@@ -30,6 +35,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(chat.router)
 app.include_router(stripe.router)
+app.include_router(settings_router.router)
 
 @app.get("/")
 async def root():

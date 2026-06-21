@@ -119,6 +119,49 @@ class ApiService {
         return "JARVIS here. Regarding '$message': My local simulator is running fine! To unlock full GPT-5 reasoning, please start the FastAPI backend and configure your API key.";
     }
   }
+
+  Future<bool> saveCustomApiKeys(String openaiKey, String geminiKey) async {
+    final auth = _ref.read(authServiceProvider.notifier);
+    final headers = {
+      'Content-Type': 'application/json',
+      if (auth.token.isNotEmpty) 'Authorization': 'Bearer ${auth.token}',
+    };
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/settings/keys'),
+        headers: headers,
+        body: jsonEncode({
+          'openai_key': openaiKey,
+          'gemini_key': geminiKey,
+        }),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<Map<String, dynamic>> getCustomApiKeysStatus() async {
+    final auth = _ref.read(authServiceProvider.notifier);
+    final headers = {
+      if (auth.token.isNotEmpty) 'Authorization': 'Bearer ${auth.token}',
+    };
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/settings/keys'),
+        headers: headers,
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+    } catch (e) {
+      // Fallback
+    }
+    return {
+      'openai_key_configured': false,
+      'gemini_key_configured': false,
+    };
+  }
 }
 
 final apiServiceProvider = Provider<ApiService>((ref) {

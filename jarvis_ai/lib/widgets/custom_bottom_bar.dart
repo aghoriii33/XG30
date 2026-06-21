@@ -52,7 +52,7 @@ class CustomBottomBar extends StatelessWidget {
             context: context,
             icon: Icons.person_rounded,
             label: "Profile",
-            route: "/login",
+            route: "/settings",
           ),
         ],
       ),
