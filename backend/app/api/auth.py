@@ -40,8 +40,9 @@ async def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
         # Mock verification for testing
         if token == "mock-expired-token":
             raise HTTPException(status_code=401, detail="Token expired")
+        uid_part = token.split("-")[-1] if "-" in token else token
         return {
-            "uid": f"mock-uid-{token[:8]}",
+            "uid": uid_part,
             "email": "michael.assistant@example.com",
             "name": "Michael",
             "email_verified": True,

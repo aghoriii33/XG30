@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api import auth, chat, stripe, settings_router
 from app.config import settings
 from app.db import init_db
+# pyrefly: ignore [missing-import]
 import uvicorn
 import logging
 
