@@ -332,7 +332,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
             ),
 
-            const CustomBottomBar(activeRoute: '/login'),
+            const CustomBottomBar(activeRoute: '/settings'),
           ],
         ),
       ),

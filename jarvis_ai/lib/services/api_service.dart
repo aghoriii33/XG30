@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'auth_service.dart';
@@ -17,9 +19,18 @@ class ChatMessageData {
 
 class ApiService {
   final Ref _ref;
-  final String _baseUrl = 'http://127.0.0.1:8000';
+
+  // Use 10.0.2.2 on Android emulator (maps to host's localhost)
+  // Use 127.0.0.1 on web/desktop
+  String get _baseUrl {
+    if (!kIsWeb && Platform.isAndroid) {
+      return 'http://10.0.2.2:8000';
+    }
+    return 'http://127.0.0.1:8000';
+  }
 
   ApiService(this._ref);
+
 
   Future<Map<String, dynamic>> sendChatMessage(String message, String model, List<ChatMessageData> history) async {
     final auth = _ref.read(authServiceProvider.notifier);
